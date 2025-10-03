@@ -1,9 +1,10 @@
 <?php
 namespace App\Services\Auth;
 
-use App\Contracts\AuthRepositoryInterface;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Services\Auth\TokenService;
+use Illuminate\Support\Facades\Hash;
+use App\Contracts\AuthRepositoryInterface;
 
 class AuthService
 {
