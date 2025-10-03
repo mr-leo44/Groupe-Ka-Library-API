@@ -38,7 +38,7 @@ return new class extends Migration {
     public function down(): void {
         Schema::dropIfExists('cities');
         Schema::dropIfExists('clans');
-        Schema::dropIfExists('deaneries');
+        Schema::dropIfExists('doyennes');
         Schema::dropIfExists('dioceses');
     }
 };
