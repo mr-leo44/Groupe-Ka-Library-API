@@ -29,6 +29,11 @@ class AuthController extends Controller
         if (!$result) {
             return ApiResponse::error('Invalid credentials', Response::HTTP_UNAUTHORIZED);
         }
+        if (Response::HTTP_UNAUTHORIZED) {
+            $request->failedLogin();
+        } else {
+            $request->successfulLogin();
+        }
         return ApiResponse::success('Authenticated', $result);
     }
 
@@ -43,7 +48,7 @@ class AuthController extends Controller
             );
             return ApiResponse::success('Authenticated with social provider', $result);
         } catch (\Throwable $e) {
-            Log::error('Social login error: '.$e->getMessage());
+            Log::error('Social login error: ' . $e->getMessage());
             return ApiResponse::error('Social login failed', Response::HTTP_BAD_REQUEST);
         }
     }
