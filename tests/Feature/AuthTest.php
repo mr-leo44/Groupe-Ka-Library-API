@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use Mockery;
 use Tests\TestCase;
+use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\User as SocialUserContract;
@@ -64,6 +66,69 @@ class AuthTest extends TestCase
             ]);
     }
 
+    /** @test */
+    public function test_user_cannot_register_with_existing_email(): void
+    {
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Test',
+            'email' => 'taken@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonStructure([
+                'message',
+                'errors' => ['email'],
+            ])
+            ->assertJsonPath('message', 'The email has already been taken.')
+            ->assertJsonPath('errors.email.0', 'The email has already been taken.');
+    }
+
+    /** @test */
+    public function test_user_can_login_with_valid_credentials(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('password'),
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'user',
+                    'token',
+                ]
+            ]);
+    }
+
+    /** @test */
+    public function test_user_cannot_login_with_invalid_credentials(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('password'),
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrongpassword',
+        ]);
+
+        $response->assertStatus(400)
+            ->assertJsonStructure([
+                'message',
+            ])
+            ->assertJsonPath('message', 'Invalid credentials');
+    }
+
     /**
      * Test social login with Google.
      */
@@ -103,5 +168,19 @@ class AuthTest extends TestCase
     {
         Mockery::close();
         parent::tearDown();
+    }
+
+    /** @test */
+    public function test_social_login_fails_with_invalid_provider(): void
+    {
+        $response = $this->postJson('/api/auth/social/invalid', [
+            'token' => 'whatever',
+        ]);
+
+        $response->assertStatus(404)
+            ->assertJsonStructure([
+                'message',
+            ])
+            ->assertJsonPath('message', 'The route api/auth/social/invalid could not be found.');
     }
 }
