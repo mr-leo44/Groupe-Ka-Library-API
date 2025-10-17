@@ -44,8 +44,15 @@ class AuthRepository implements AuthRepositoryInterface
 
         $user = new User();
         $user->name = $socialData['name'] ?? 'User '.Str::random(6);
-        $user->email = $socialData['email'] ?? Str::random(8).'@example.com';
-        $user->password = Hash::make(Str::random(24));
+
+         // IMPORTANT: Require email for social login
+        if (empty($socialData['email'])) {
+            throw new \Exception('Email is required for social authentication');
+        }
+
+        $user->email = $socialData['email'];
+        $user->email_verified_at = now(); // Auto-verify for social login
+        $user->password = Hash::make(Str::random(32)); // Random password
         $user->provider = $socialData['provider'];
         $user->provider_id = $socialData['provider_id'];
         $user->avatar = $socialData['avatar'] ?? null;
@@ -58,11 +65,22 @@ class AuthRepository implements AuthRepositoryInterface
 
     public function attachSocialToUser(User $user, array $socialData): User
     {
+        // Only attach if not already linked to another provider
+        if ($user->provider && $user->provider !== $socialData['provider']) {
+            throw new \Exception("This email is already linked to {$user->provider} account");
+        }
+
         $user->provider = $socialData['provider'];
         $user->provider_id = $socialData['provider_id'];
         if (!empty($socialData['avatar'])) $user->avatar = $socialData['avatar'];
         if (!empty($socialData['city_id'])) $user->city_id = $socialData['city_id'];
         if (!empty($socialData['clan_id'])) $user->clan_id = $socialData['clan_id'];
+
+        // Auto-verify email if linking social account
+        if (!$user->hasVerifiedEmail()) {
+            $user->email_verified_at = now();
+        }
+        
         $user->save();
         return $user;
     }
