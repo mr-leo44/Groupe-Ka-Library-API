@@ -5,6 +5,15 @@ namespace App\Http\Requests;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * @property string $name User's full name
+ * @property string $email User's email address
+ * @property string $password Strong password (min 8 chars, mixed case, numbers, symbols)
+ * @property string $password_confirmation Password confirmation
+ * @property int|null $city_id User's city ID (optional)
+ * @property int|null $clan_id User's clan ID (optional)
+ * @property string|null $device_name Device name for token (optional)
+ */
 class RegisterRequest extends FormRequest
 {
     /**
@@ -42,6 +51,9 @@ class RegisterRequest extends FormRequest
         ];
     }
 
+    /**
+     * Get custom attributes for validator errors.
+     */
     public function messages(): array
     {
         return [
