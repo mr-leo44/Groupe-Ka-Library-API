@@ -1,415 +1,208 @@
-# 📦 Installation Guide - Groupe Ka Library API
+# 📚 Groupe Ka Library API
 
-## Prerequisites
+A comprehensive RESTful API for managing a digital library with books, user authentication, role-based access control, and audit logging.
 
-- PHP >= 8.2
-- Composer
-- MySQL or PostgreSQL
-- Node.js & NPM (for frontend assets if needed)
+## ✨ Features
 
-## Step-by-Step Installation
+- ✅ **Authentication**: Email/password + Social login (Google, Apple)
+- ✅ **Email Verification**: Mandatory email confirmation
+- ✅ **Strong Password Policy**: Mixed case, numbers, symbols, breach detection
+- ✅ **Token-based Auth**: Laravel Sanctum with configurable expiration
+- ✅ **Role-Based Access**: Admin, Manager, Member roles via Spatie
+- ✅ **Session Management**: View and revoke active tokens per device
+- ✅ **Audit Logging**: Track all model changes (Owen-It Auditing)
+- ✅ **Activity Logging**: Track user actions (login, logout, etc.)
+- ✅ **Suspicious Login Detection**: Alert on new IP/device
+- ✅ **Password Reset**: Secure email-based password recovery
+- ✅ **Rate Limiting**: Brute-force protection on authentication
+- ✅ **Soft Deletes**: Recover deleted accounts
+- ✅ **API Documentation**: Auto-generated with Laravel Scramble
 
-### 1. Clone the Repository
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
+# Clone repository
 git clone https://github.com/mr-leo44/Groupe-Ka-Library-API.git
 cd Groupe-Ka-Library-API
-```
 
-### 2. Install Dependencies
-
-```bash
+# Manual installation
 composer install
-```
-
-### 3. Install Additional Security Packages
-
-```bash
-# Activity logging
-composer require spatie/laravel-activitylog
-
-# If not already installed
-composer require owen-it/laravel-auditing
-composer require spatie/laravel-permission
-composer require laravel/sanctum
-composer require laravel/socialite
-```
-
-### 4. Environment Configuration
-
-```bash
-# Copy environment file
 cp .env.example .env
-
-# Generate application key
 php artisan key:generate
+php artisan migrate
+php artisan db:seed
 ```
 
-### 5. Configure Database
+### Start Server
 
-Edit `.env` file:
+```bash
+# Start API server
+php artisan serve
 
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=groupeka_library
-DB_USERNAME=root
-DB_PASSWORD=your_password
+# Start queue worker (separate terminal)
+php artisan queue:work
+
+# API available at: http://localhost:8000
+# Documentation at: http://localhost:8000/docs/api
 ```
 
-### 6. Configure Mail (Important for Email Verification)
+### Test API
 
-**For Development (Mailtrap):**
+```bash
+# use PHPUnit
+php artisan test
+```
+
+## 📋 Test Credentials
+
+After running `php artisan db:seed`, you can use:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@groupeka.com | Admin@123! |
+| Manager | manager@groupeka.com | Manager@123! |
+| Member | john.doe@example.com | Member@123! |
+
+## 📚 API Documentation
+
+Interactive API documentation is available at:
+
+```
+http://localhost:8000/docs/api
+```
+
+Powered by **Laravel Scramble** - automatically generated from your routes and controllers.
+
+### Key Endpoints
+
+#### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login with email/password
+- `POST /api/auth/social` - Social login (Google/Apple)
+- `POST /api/auth/logout` - Logout current device
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password
+
+#### User Profile
+- `GET /api/user/profile` - Get profile
+- `PUT /api/user/profile` - Update profile
+- `POST /api/user/change-password` - Change password
+- `GET /api/user/sessions` - List active sessions
+- `DELETE /api/user/sessions/{id}` - Revoke session
+
+#### Admin
+- `GET /api/admin/users` - List all users
+- `PUT /api/admin/users/{id}/role` - Update user role
+- `DELETE /api/admin/users/{id}` - Delete user
+- `GET /api/admin/audits` - View audit logs
+- `GET /api/admin/activities` - View activity logs
+- `GET /api/admin/statistics` - Dashboard statistics
+
+## 🏗️ Architecture
+
+```
+app/
+├── Http/
+│   ├── Controllers/Api/
+│   │   ├── AuthController.php
+│   │   ├── UserController.php
+│   │   ├── PasswordController.php
+│   │   ├── EmailVerificationController.php
+│   │   └── AuditController.php
+│   ├── Requests/
+│   │   ├── RegisterRequest.php
+│   │   ├── LoginRequest.php
+│   │   └── SocialLoginRequest.php
+│   └── Middleware/
+│       ├── EnsureEmailIsVerified.php
+│       └── DetectSuspiciousLogin.php
+├── Models/
+│   ├── User.php (Auditable, MustVerifyEmail)
+│   ├── Book.php (Auditable)
+│   └── ...
+├── Services/Auth/
+│   ├── AuthService.php
+│   ├── SocialAuthService.php
+│   └── TokenService.php
+├── Repositories/
+│   └── AuthRepository.php
+└── Contracts/
+    └── AuthRepositoryInterface.php
+```
+
+## 🔐 Security Features
+
+### Password Requirements
+- Minimum 8 characters
+- Mixed case (uppercase + lowercase)
+- At least one number
+- At least one special symbol
+- Not in breached password database
+
+### Rate Limiting
+- Login: 5 attempts per minute
+- Registration: 5 attempts per minute
+- Password reset: 3 attempts per minute
+- Email verification resend: 3 attempts per minute
+
+### Token Security
+- Configurable expiration (default: 60 minutes)
+- Revoked on password change
+- Per-device management
+- Bearer token authentication
+
+### Audit & Monitoring
+- All model changes tracked
+- User actions logged (login, logout, etc.)
+- New IP/device detection
+- Failed login attempt logging
+
+## 🛠️ Configuration
+
+### Environment Variables
 
 ```env
+# Token expiration (minutes)
+SANCTUM_EXPIRATION=60
+
+# Email configuration
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.mailtrap.io
 MAIL_PORT=2525
-MAIL_USERNAME=your_mailtrap_username
-MAIL_PASSWORD=your_mailtrap_password
-```
 
-**For Production (Example: Gmail):**
-
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_ENCRYPTION=tls
-```
-
-### 7. Configure Sanctum
-
-```env
-SANCTUM_EXPIRATION=60  # Tokens expire after 60 minutes
-```
-
-### 8. Configure Social Login (Optional)
-
-**Google OAuth:**
-- Go to [Google Console](https://console.cloud.google.com)
-- Create OAuth 2.0 credentials
-- Add to `.env`:
-
-```env
+# Social Auth
 GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-```
-
-**Apple Sign In:**
-- Go to [Apple Developer](https://developer.apple.com)
-- Configure Sign in with Apple
-- Add to `.env`:
-
-```env
+GOOGLE_CLIENT_SECRET=your-secret
 APPLE_CLIENT_ID=your-client-id
-APPLE_CLIENT_SECRET=your-client-secret
+APPLE_CLIENT_SECRET=your-secret
+
+# Enable auditing
+AUDITING_ENABLED=true
+
+# Queue for async operations
+QUEUE_CONNECTION=database
 ```
 
-### 9. Publish Configuration Files
+### Enable New Device Notifications
 
-```bash
-# Publish activity log migrations
-php artisan vendor:publish --provider="Spatie\Activitylog\ActivitylogServiceProvider" --tag="activitylog-migrations"
-
-# Publish activity log config
-php artisan vendor:publish --provider="Spatie\Activitylog\ActivitylogServiceProvider" --tag="activitylog-config"
-
-# Create queue jobs table
-php artisan queue:table
-```
-
-### 10. Run Migrations
-
-```bash
-php artisan migrate
-```
-
-### 11. Seed Database with Roles
-
-```bash
-php artisan db:seed --class=RoleSeeder
-```
-
-### 12. Create Storage Link (if needed)
-
-```bash
-php artisan storage:link
-```
-
-### 13. Start Queue Worker (Important for Emails)
-
-```bash
-# In a separate terminal
-php artisan queue:work
-
-# Or use supervisor in production
-```
-
-### 14. Start Development Server
-
-```bash
-php artisan serve
-```
-
-API will be available at: `http://localhost:8000`
-
----
-
-## 🔧 Post-Installation Configuration
-
-### Create Admin User
-
-```bash
-php artisan tinker
-```
-
-```php
-$user = User::create([
-    'name' => 'Admin',
-    'email' => 'admin@groupeka.com',
-    'password' => Hash::make('SecurePassword123!'),
-    'email_verified_at' => now(),
-]);
-
-$user->assignRole('admin');
-```
-
-### Enable New Device Notifications (Optional)
-
-In `.env`:
-
+1. Set in `.env`:
 ```env
 ENABLE_NEW_DEVICE_NOTIFICATIONS=true
 ```
 
-Uncomment in `DetectSuspiciousLogin.php`:
-
+2. Uncomment in `DetectSuspiciousLogin.php`:
 ```php
 $user->notify(new NewDeviceLoginNotification($currentIp, $userAgent));
 ```
 
-### Configure Rate Limiting (Optional)
+3. Configure mail settings
 
-In `.env`:
+## 📦 Dependencies
 
-```env
-THROTTLE_LOGIN_MAX_ATTEMPTS=5
-THROTTLE_LOGIN_DECAY_MINUTES=1
-```
-
----
-
-## 🧪 Testing the API
-
-### Register a New User
-
-```bash
-POST http://localhost:8000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "SecurePass123!@",
-  "password_confirmation": "SecurePass123!@"
-}
-```
-
-### Login
-
-```bash
-POST http://localhost:8000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "SecurePass123!@"
-}
-```
-
-### Access Protected Route
-
-```bash
-GET http://localhost:8000/api/user/profile
-Authorization: Bearer YOUR_TOKEN_HERE
-```
-
----
-
-## 📝 API Documentation
-
-All available endpoints:
-
-### Public Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login with email/password |
-| POST | `/api/auth/social` | Social login (Google/Apple) |
-| POST | `/api/auth/forgot-password` | Request password reset |
-| POST | `/api/auth/reset-password` | Reset password with token |
-
-### Protected Endpoints (Requires Auth)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/logout` | Logout current device |
-| POST | `/api/auth/logout-all` | Logout all devices |
-| GET | `/api/user/profile` | Get user profile |
-| PUT | `/api/user/profile` | Update profile |
-| POST | `/api/user/change-password` | Change password |
-| GET | `/api/user/sessions` | List active sessions |
-| DELETE | `/api/user/sessions/{id}` | Revoke session |
-
-### Admin Endpoints (Requires Admin Role)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/users` | List all users |
-| GET | `/api/admin/users/{id}` | Get user details |
-| PUT | `/api/admin/users/{id}/role` | Update user role |
-| DELETE | `/api/admin/users/{id}` | Delete user |
-| GET | `/api/admin/audits` | List all audits |
-| GET | `/api/admin/activities` | List activities |
-| GET | `/api/admin/statistics` | Get dashboard stats |
-
----
-
-## 🚀 Deployment to Production
-
-### 1. Optimize Application
-
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-composer install --optimize-autoloader --no-dev
-```
-
-### 2. Set Environment to Production
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-```
-
-### 3. Setup Queue Worker with Supervisor
-
-Create `/etc/supervisor/conf.d/laravel-worker.conf`:
-
-```ini
-[program:laravel-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/your/app/artisan queue:work --sleep=3 --tries=3
-autostart=true
-autorestart=true
-user=www-data
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/path/to/your/app/storage/logs/worker.log
-```
-
-### 4. Setup Scheduled Tasks (Cron)
-
-```bash
-crontab -e
-```
-
-Add:
-
-```cron
-* * * * * cd /path/to/your/app && php artisan schedule:run >> /dev/null 2>&1
-```
-
-### 5. Configure Web Server (Nginx example)
-
-```nginx
-server {
-    listen 80;
-    server_name api.groupeka.com;
-    root /path/to/your/app/public;
-
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-
-    index index.php;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
-```
-
----
-
-## 🔒 Security Checklist
-
-- [ ] Change `APP_KEY` in production
-- [ ] Set `APP_DEBUG=false` in production
-- [ ] Configure proper CORS settings
-- [ ] Enable HTTPS (SSL certificate)
-- [ ] Set strong database password
-- [ ] Configure firewall (UFW/iptables)
-- [ ] Setup regular database backups
-- [ ] Monitor logs regularly
-- [ ] Keep dependencies updated (`composer update`)
-- [ ] Configure rate limiting properly
-- [ ] Review and test all authentication flows
-
----
-
-## 🐛 Troubleshooting
-
-### Email Not Sending
-
-```bash
-# Check queue
-php artisan queue:work --verbose
-
-# Check logs
-tail -f storage/logs/laravel.log
-```
-
-### Token Expiration Issues
-
-Check `config/sanctum.php`:
-
-```php
-'expiration' => env('SANCTUM_EXPIRATION', 60),
-```
-
-### Permission Denied Errors
-
-```bash
-sudo chown -R www-data:www-data storage bootstrap/cache
-sudo chmod -R 775 storage bootstrap/cache
-```
-
----
-
-## 📞 Support
-
-For issues or questions:
-- GitHub Issues: [Repository Issues](https://github.com/mr-leo44/Groupe-Ka-Library-API/issues)
-- Email: support@groupeka.com
-
----
-
-## 📄 License
-
-[Your License Here]
+- **laravel/sanctum** - API authentication
+- **spatie/laravel-permission** - Role & permission management
+- **spatie/laravel-activitylog** - Activity logging
+- **owen-it/laravel-auditing** - Model auditing
+- **laravel/socialite** - Social authentication
