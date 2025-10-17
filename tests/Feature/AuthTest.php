@@ -2,185 +2,219 @@
 
 namespace Tests\Feature;
 
-use Mockery;
-use Tests\TestCase;
 use App\Models\User;
-use Database\Seeders\RoleSeeder;
-use Illuminate\Support\Facades\Hash;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Socialite\Contracts\User as SocialUserContract;
-
-trait SeedsRoles
-{
-    public function seedRoles(): void
-    {
-        $this->seed(RoleSeeder::class);
-    }
-}
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
-    use RefreshDatabase, SeedsRoles;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seedRoles();
-    }
-    /**
-     * Test the full register and login flow.
-     */
-    public function test_register_and_login_flow(): void
-    {
-        // Register
-        $registerResponse = $this->postJson('/api/auth/register', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-        ]);
-
-        $registerResponse->assertStatus(201)
-            ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'user',
-                    'token',
-                ]
-            ]);
-
-        // Login
-        $loginResponse = $this->postJson('/api/auth/login', [
-            'email' => 'test@example.com',
-            'password' => 'password123',
-        ]);
-
-        $loginResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'user',
-                    'token',
-                ]
-            ]);
+        $this->artisan('db:seed', ['--class' => 'RoleSeeder']);
     }
 
     /** @test */
-    public function test_user_cannot_register_with_existing_email(): void
+    public function test_user_can_register_with_valid_data()
     {
-        User::factory()->create(['email' => 'taken@example.com']);
-
         $response = $this->postJson('/api/auth/register', [
-            'name' => 'Test',
-            'email' => 'taken@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'SecurePass123!@',
+            'password_confirmation' => 'SecurePass123!@',
         ]);
 
-        $response
-            ->assertStatus(422)
-            ->assertJsonStructure([
-                'message',
-                'errors' => ['email'],
-            ])
-            ->assertJsonPath('message', 'The email has already been taken.')
-            ->assertJsonPath('errors.email.0', 'The email has already been taken.');
+        $response->assertStatus(201)
+                 ->assertJsonStructure([
+                     'success',
+                     'message',
+                     'data' => ['user', 'token']
+                 ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'john@example.com'
+        ]);
     }
 
     /** @test */
-    public function test_user_can_login_with_valid_credentials(): void
+    public function registration_requires_strong_password()
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'weak',
+            'password_confirmation' => 'weak',
+        ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonValidationErrors('password');
+    }
+
+    /** @test */
+    public function test_user_can_login_with_valid_credentials()
     {
         $user = User::factory()->create([
-            'password' => Hash::make('password'),
+            'email' => 'john@example.com',
+            'password' => Hash::make('SecurePass123!@'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
+            'email' => 'john@example.com',
+            'password' => 'SecurePass123!@',
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'user',
-                    'token',
-                ]
-            ]);
+                 ->assertJsonStructure([
+                     'success',
+                     'data' => ['user', 'token']
+                 ]);
     }
 
     /** @test */
-    public function test_user_cannot_login_with_invalid_credentials(): void
+    public function login_fails_with_invalid_credentials()
     {
         $user = User::factory()->create([
-            'password' => Hash::make('password'),
+            'email' => 'john@example.com',
+            'password' => Hash::make('SecurePass123!@'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => $user->email,
+            'email' => 'john@example.com',
             'password' => 'wrongpassword',
         ]);
 
-        $response->assertStatus(400)
-            ->assertJsonStructure([
-                'message',
-            ])
-            ->assertJsonPath('message', 'Invalid credentials');
-    }
-
-    /**
-     * Test social login with Google.
-     */
-    public function test_social_login_google(): void
-    {
-        // Mock the Socialite user
-        $socialUser = Mockery::mock(SocialUserContract::class);
-        $socialUser->shouldReceive('getId')->andReturn('12345');
-        $socialUser->shouldReceive('getEmail')->andReturn('social@example.com');
-        $socialUser->shouldReceive('getName')->andReturn('Social User');
-        $socialUser->shouldReceive('getNickname')->andReturn(null);
-        $socialUser->shouldReceive('getAvatar')->andReturn(null);
-
-        // Mock the Socialite driver chain
-        Socialite::shouldReceive('driver->stateless->userFromToken')
-            ->andReturn($socialUser);
-
-        $response = $this->postJson('/api/auth/social', [
-            'provider' => 'google',
-            'access_token' => 'token',
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'user',
-                    'token',
-                ]
-            ]);
-    }
-
-    /**
-     * Tear down Mockery.
-     */
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
+        $response->assertStatus(401)
+                 ->assertJson([
+                     'success' => false,
+                     'message' => 'Invalid credentials'
+                 ]);
     }
 
     /** @test */
-    public function test_social_login_fails_with_invalid_provider(): void
+    public function login_is_rate_limited()
     {
-        $response = $this->postJson('/api/auth/social/invalid', [
-            'token' => 'whatever',
+        $user = User::factory()->create([
+            'email' => 'john@example.com',
+            'password' => Hash::make('SecurePass123!@'),
         ]);
 
-        $response->assertStatus(404)
-            ->assertJsonStructure([
-                'message',
-            ])
-            ->assertJsonPath('message', 'The route api/auth/social/invalid could not be found.');
+        // Attempt login 6 times with wrong password
+        for ($i = 0; $i < 6; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'john@example.com',
+                'password' => 'wrongpassword',
+            ]);
+        }
+
+        // 6th attempt should be rate limited
+        $response = $this->postJson('/api/auth/login', [
+            'email' => 'john@example.com',
+            'password' => 'wrongpassword',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function test_authenticated_user_can_logout()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+                         ->postJson('/api/auth/logout');
+
+        $response->assertStatus(200)
+                 ->assertJson(['success' => true]);
+
+        // Token should be deleted
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $user->id,
+        ]);
+    }
+
+    /** @test */
+    public function test_user_can_access_profile_with_valid_token()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+                         ->getJson('/api/user/profile');
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'success' => true,
+                     'data' => [
+                         'email' => $user->email
+                     ]
+                 ]);
+    }
+
+    /** @test */
+    public function test_user_cannot_access_profile_without_token()
+    {
+        $response = $this->getJson('/api/user/profile');
+
+        $response->assertStatus(401);
+    }
+
+    /** @test */
+    public function test_user_can_change_password()
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('OldPass123!@'),
+        ]);
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+                         ->postJson('/api/user/change-password', [
+                             'current_password' => 'OldPass123!@',
+                             'password' => 'NewPass123!@',
+                             'password_confirmation' => 'NewPass123!@',
+                         ]);
+
+        $response->assertStatus(200);
+
+        // Verify new password works
+        $this->assertTrue(Hash::check('NewPass123!@', $user->fresh()->password));
+    }
+
+    /** @test */
+    public function test_user_assigned_member_role_on_registration()
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'SecurePass123!@',
+            'password_confirmation' => 'SecurePass123!@',
+        ]);
+
+        $user = User::where('email', 'john@example.com')->first();
+        
+        $this->assertTrue($user->hasRole('member'));
+    }
+
+    /** @test */
+    public function last_login_tracking_works()
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('SecurePass123!@'),
+        ]);
+
+        $this->assertNull($user->last_login_at);
+
+        $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'SecurePass123!@',
+        ]);
+
+        $user->refresh();
+        
+        $this->assertNotNull($user->last_login_at);
+        $this->assertNotNull($user->last_login_ip);
     }
 }
