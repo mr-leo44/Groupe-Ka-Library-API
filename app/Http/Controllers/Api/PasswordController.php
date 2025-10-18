@@ -97,9 +97,3 @@ class PasswordController extends Controller
         return ApiResponse::error('Unable to reset password. Token may be invalid or expired.', null, 400);
     }
 }
-
-            return ApiResponse::success('Logged out from all devices', null);
-        } else {
-            return ApiResponse::error('User not authenticated', Response::HTTP_UNAUTHORIZED);
-        }
-    }
