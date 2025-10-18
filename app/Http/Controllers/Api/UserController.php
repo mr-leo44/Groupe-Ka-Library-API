@@ -9,10 +9,31 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 
+/**
+ * @tags User Profile
+ */
 class UserController extends Controller
 {
     /**
      * Get authenticated user profile
+     * 
+     * Returns the current user's profile with their roles, city, and clan information.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "User profile retrieved",
+     *   "data": {
+     *     "id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "email_verified_at": "2024-01-15T10:30:00.000000Z",
+     *     "city": {"id": 1, "name": "Kinshasa"},
+     *     "clan": {"id": 1, "name": "Clan Saint Pierre"},
+     *     "roles": [{"name": "member"}]
+     *   }
+     * }
      */
     public function profile(Request $request)
     {
@@ -24,6 +45,20 @@ class UserController extends Controller
 
     /**
      * Update user profile
+     * 
+     * Update the authenticated user's name, city, or clan.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Profile updated successfully",
+     *   "data": {
+     *     "id": 1,
+     *     "name": "John Doe Updated",
+     *     "email": "john@example.com"
+     *   }
+     * }
      */
     public function update(Request $request)
     {
@@ -47,6 +82,21 @@ class UserController extends Controller
 
     /**
      * Change password
+     * 
+     * Change the authenticated user's password. 
+     * All other active sessions will be logged out for security.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Password changed successfully. All other sessions have been logged out."
+     * }
+     * 
+     * @response 400 {
+     *   "success": false,
+     *   "message": "Current password is incorrect"
+     * }
      */
     public function changePassword(Request $request)
     {
@@ -65,12 +115,10 @@ class UserController extends Controller
             ],
         ]);
 
-        // Verify current password
         if (!Hash::check($validated['current_password'], $user->password)) {
             return ApiResponse::error('Current password is incorrect', null, 400);
         }
 
-        // Prevent reusing the same password
         if (Hash::check($validated['password'], $user->password)) {
             return ApiResponse::error('New password must be different from current password', null, 400);
         }
@@ -79,7 +127,6 @@ class UserController extends Controller
             'password' => Hash::make($validated['password'])
         ]);
 
-        // Revoke all other tokens except current one
         $currentToken = $user->currentAccessToken();
         $user->tokens()->where('id', '!=', $currentToken->id)->delete();
 
@@ -92,7 +139,25 @@ class UserController extends Controller
     }
 
     /**
-     * Get all active sessions (tokens)
+     * Get all active sessions
+     * 
+     * List all active authentication tokens (devices) for the current user.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Active sessions retrieved",
+     *   "data": [
+     *     {
+     *       "id": 1,
+     *       "name": "mobile-app",
+     *       "last_used_at": "2024-01-15T10:30:00.000000Z",
+     *       "created_at": "2024-01-10T08:00:00.000000Z",
+     *       "is_current": true
+     *     }
+     *   ]
+     * }
      */
     public function sessions(Request $request)
     {
@@ -113,6 +178,26 @@ class UserController extends Controller
 
     /**
      * Revoke a specific session
+     * 
+     * Logout from a specific device by revoking its token.
+     * Cannot revoke the current session (use /logout instead).
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Session revoked successfully"
+     * }
+     * 
+     * @response 400 {
+     *   "success": false,
+     *   "message": "Cannot revoke current session. Use logout instead."
+     * }
+     * 
+     * @response 404 {
+     *   "success": false,
+     *   "message": "Session not found"
+     * }
      */
     public function revokeSession(Request $request, $tokenId)
     {
@@ -124,7 +209,6 @@ class UserController extends Controller
             return ApiResponse::error('Session not found', null, 404);
         }
 
-        // Prevent revoking current session
         if ($token->id === $user->currentAccessToken()->id) {
             return ApiResponse::error('Cannot revoke current session. Use logout instead.', null, 400);
         }
@@ -140,7 +224,34 @@ class UserController extends Controller
     }
 
     /**
-     * List all users (Admin only)
+     * List all users
+     * 
+     * Get paginated list of all users with their roles and locations.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Users list retrieved",
+     *   "data": {
+     *     "current_page": 1,
+     *     "data": [
+     *       {
+     *         "id": 1,
+     *         "name": "John Doe",
+     *         "email": "john@example.com",
+     *         "roles": [{"name": "member"}]
+     *       }
+     *     ],
+     *     "total": 50
+     *   }
+     * }
+     * 
+     * @response 403 {
+     *   "success": false,
+     *   "message": "Unauthorized"
+     * }
      */
     public function index(Request $request)
     {
@@ -162,7 +273,24 @@ class UserController extends Controller
     }
 
     /**
-     * Show user details (Admin only)
+     * Show user details
+     * 
+     * Get detailed information about a specific user.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "User details retrieved",
+     *   "data": {
+     *     "id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "roles": [{"name": "member"}],
+     *     "permissions": []
+     *   }
+     * }
      */
     public function show(User $user)
     {
@@ -173,7 +301,28 @@ class UserController extends Controller
     }
 
     /**
-     * Update user role (Admin only)
+     * Update user role
+     * 
+     * Change a user's role (admin, manager, or member).
+     * Cannot change your own role.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Role updated successfully",
+     *   "data": {
+     *     "id": 2,
+     *     "name": "Jane Doe",
+     *     "roles": [{"name": "manager"}]
+     *   }
+     * }
+     * 
+     * @response 403 {
+     *   "success": false,
+     *   "message": "Cannot change your own role"
+     * }
      */
     public function updateRole(Request $request, User $user)
     {
@@ -181,7 +330,6 @@ class UserController extends Controller
             'role' => 'required|string|in:admin,manager,member'
         ]);
 
-        // Prevent self-demotion
         if ($user->id === $request->user()->id && $validated['role'] !== 'admin') {
             return ApiResponse::error('Cannot change your own role', null, 403);
         }
@@ -202,11 +350,26 @@ class UserController extends Controller
     }
 
     /**
-     * Delete user (Admin only)
+     * Delete user
+     * 
+     * Soft delete a user account. Can be restored later.
+     * Cannot delete your own account.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "User deleted successfully"
+     * }
+     * 
+     * @response 403 {
+     *   "success": false,
+     *   "message": "Cannot delete your own account"
+     * }
      */
     public function destroy(Request $request, User $user)
     {
-        // Prevent self-deletion
         if ($user->id === $request->user()->id) {
             return ApiResponse::error('Cannot delete your own account', null, 403);
         }
@@ -223,7 +386,27 @@ class UserController extends Controller
     }
 
     /**
-     * Restore deleted user (Admin only)
+     * Restore deleted user
+     * 
+     * Restore a soft-deleted user account.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "User restored successfully",
+     *   "data": {
+     *     "id": 5,
+     *     "name": "Restored User",
+     *     "email": "restored@example.com"
+     *   }
+     * }
+     * 
+     * @response 400 {
+     *   "success": false,
+     *   "message": "User is not deleted"
+     * }
      */
     public function restore($userId)
     {

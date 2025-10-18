@@ -52,6 +52,19 @@ class AuditController extends Controller
 
     /**
      * Get audits for a specific user
+     * 
+     * View all model changes made by a specific user.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Audits for user John Doe",
+     *   "data": {
+     *     "data": [...]
+     *   }
+     * }
      */
     public function userAudits(User $user)
     {
@@ -65,7 +78,26 @@ class AuditController extends Controller
 
     /**
      * List all activity logs (Admin only)
-     * Activities = User actions (login, logout, etc.)
+     * 
+     * Get paginated list of user actions (login, logout, etc.).
+     * Activities = User actions (login, logout, password changes, etc.)
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Activity logs retrieved successfully",
+     *   "data": {
+     *     "data": [
+     *       {
+     *         "description": "User logged in",
+     *         "causer": {"name": "John Doe"},
+     *         "properties": {"ip": "127.0.0.1"},
+     *         "created_at": "2024-01-15T10:30:00.000000Z"
+     *       }
+     *     ]
+     *   }
+     * }
      */
     public function activityLogs(Request $request)
     {
@@ -100,6 +132,11 @@ class AuditController extends Controller
 
     /**
      * Get activity logs for a specific user
+     * 
+     * View all actions performed by a specific user.
+     * Admin only.
+     * 
+     * @authenticated
      */
     public function userActivityLogs(User $user)
     {
@@ -113,6 +150,24 @@ class AuditController extends Controller
 
     /**
      * Get security events (logins, logouts, failed attempts)
+     * 
+     * Filter activity logs to show only security-related events.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Security events retrieved",
+     *   "data": {
+     *     "data": [
+     *       {
+     *         "description": "Failed login attempt",
+     *         "properties": {"email": "test@example.com", "ip": "192.168.1.1"}
+     *       }
+     *     ]
+     *   }
+     * }
      */
     public function securityEvents(Request $request)
     {
@@ -139,6 +194,22 @@ class AuditController extends Controller
 
     /**
      * Get statistics for dashboard
+     * 
+     * Get aggregate statistics about users and activity.
+     * Admin only.
+     * 
+     * @authenticated
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Statistics retrieved",
+     *   "data": {
+     *     "total_users": 50,
+     *     "verified_users": 45,
+     *     "logins_today": 12,
+     *     "failed_logins_today": 3
+     *   }
+     * }
      */
     public function statistics()
     {

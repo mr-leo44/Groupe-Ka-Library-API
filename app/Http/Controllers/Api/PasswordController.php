@@ -15,6 +15,19 @@ class PasswordController extends Controller
 {
     /**
      * Send password reset link via email
+     * 
+     * Request a password reset link to be sent to the user's email.
+     * Rate limited to 3 requests per minute.
+     * 
+     * @response {
+     *   "success": true,
+     *   "message": "Password reset link sent to your email"
+     * }
+     * 
+     * @response 400 {
+     *   "success": false,
+     *   "message": "Unable to send reset link. Please try again."
+     * }
      */
     public function sendResetLink(Request $request)
     {
@@ -84,3 +97,9 @@ class PasswordController extends Controller
         return ApiResponse::error('Unable to reset password. Token may be invalid or expired.', null, 400);
     }
 }
+
+            return ApiResponse::success('Logged out from all devices', null);
+        } else {
+            return ApiResponse::error('User not authenticated', Response::HTTP_UNAUTHORIZED);
+        }
+    }
