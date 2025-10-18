@@ -21,6 +21,7 @@ return [
     'export_path' => 'api.json',
 
     'info' => [
+        'title' => 'Groupe Ka Library API',
         /*
          * API version.
          */
@@ -29,7 +30,16 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => '',
+        'description' => 'API for managing books, users, and authentication in Groupe Ka digital library',
+        'contact' => [
+            'name' => 'Groupe Ka Support',
+            'email' => 'support@groupeka.com',
+            'url' => 'https://groupeka.com',
+        ],
+        'license' => [
+            'name' => 'Private',
+            'url' => null,
+        ],
     ],
 
     /*
@@ -108,4 +118,19 @@ return [
     ],
 
     'extensions' => [],
+    
+    'tags' => [
+        [
+            'name' => 'Admin - Users',
+            'description' => 'Admin endpoints for user management, role assignment, and account operations',
+        ],
+        [
+            'name' => 'Admin - Audits',
+            'description' => 'View audit logs, activity logs, security events, and statistics',
+        ],
+        [
+            'name' => 'Books',
+            'description' => 'Browse, search, and purchase books (coming soon)',
+        ],
+    ],
 ];
