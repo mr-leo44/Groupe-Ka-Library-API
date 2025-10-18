@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use OwenIt\Auditing\Models\Audit;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * @tags Admin - Audits
+ */
 class AuditController extends Controller
 {
     /**
