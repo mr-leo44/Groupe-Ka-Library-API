@@ -199,7 +199,7 @@ class UserController extends Controller
      *   "message": "Session not found"
      * }
      */
-    public function revokeSession(Request $request, $tokenId)
+    public function revokeSession(Request $request, string $tokenId)
     {
         $user = $request->user();
         
@@ -408,7 +408,7 @@ class UserController extends Controller
      *   "message": "User is not deleted"
      * }
      */
-    public function restore($userId)
+    public function restore(string $userId)
     {
         $user = User::withTrashed()->findOrFail($userId);
 
